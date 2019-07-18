@@ -64,6 +64,11 @@ function Test-VolumeCrud
 		)
 	}
 
+    # create the list of protocol types
+    $protocolTypes = New-Object string[] 2
+    $protocolTypes[0] = "NFSv3"
+    $protocolTypes[1] = "NFSv4"
+
     try
     {
         # create the resource group
@@ -83,7 +88,7 @@ function Test-VolumeCrud
         # create first volume and check
         $newTagName = "tag1"
         $newTagValue = "tagValue1"
-        $retrievedVolume = New-AzNetAppFilesVolume -ResourceGroupName $resourceGroup -Location $resourceLocation -AccountName $accName -PoolName $poolName -VolumeName $volName1 -CreationToken $volName1 -UsageThreshold $usageThreshold -ServiceLevel $serviceLevel -SubnetId $subnetId -Tag @{$newTagName = $newTagValue} -ExportPolicy $exportPolicy
+        $retrievedVolume = New-AzNetAppFilesVolume -ResourceGroupName $resourceGroup -Location $resourceLocation -AccountName $accName -PoolName $poolName -VolumeName $volName1 -CreationToken $volName1 -UsageThreshold $usageThreshold -ServiceLevel $serviceLevel -SubnetId $subnetId -Tag @{$newTagName = $newTagValue} -ExportPolicy $exportPolicy -ProtocolTypes $protocolTypes
         Assert-AreEqual "$accName/$poolName/$volName1" $retrievedVolume.Name
         Assert-AreEqual $serviceLevel $retrievedVolume.ServiceLevel
         Assert-AreEqual True $retrievedVolume.Tags.ContainsKey($newTagName)
@@ -91,11 +96,16 @@ function Test-VolumeCrud
         Assert-NotNull $retrievedVolume.ExportPolicy
         Assert-AreEqual $retrievedVolume.ExportPolicy.Rules[0].AllowedClients '0.0.0.0/0'
         Assert-AreEqual $retrievedVolume.ExportPolicy.Rules[1].AllowedClients '1.2.3.0/24'
+        Assert-AreEqual $retrievedVolume.ProtocolTypes[0] 'NFSv3'
+        Assert-AreEqual $retrievedVolume.ProtocolTypes[1] 'NFSv4'
+        Assert-NotNull $retrievedVolume.MountTargets
 
         # create second volume and check using the confirm flag
         $retrievedVolume = New-AzNetAppFilesVolume -ResourceGroupName $resourceGroup -Location $resourceLocation -AccountName $accName -PoolName $poolName -VolumeName $volName2 -CreationToken $volName2 -UsageThreshold $usageThreshold -ServiceLevel $serviceLevel -SubnetId $subnetId -Confirm:$false
         Assert-AreEqual "$accName/$poolName/$volName2" $retrievedVolume.Name
         Assert-AreEqual $serviceLevel $retrievedVolume.ServiceLevel
+        # default protocol type for new volume
+        Assert-AreEqual $retrievedVolume.ProtocolTypes[0] 'NFSv3'
 
         # create and check a third volume  using the WhatIf - it should not be created
         $retrievedVolume = New-AzNetAppFilesVolume -ResourceGroupName $resourceGroup -Location $resourceLocation -AccountName $accName -PoolName $poolName -VolumeName $volName3 -CreationToken $volName2 -UsageThreshold $usageThreshold -ServiceLevel $serviceLevel -SubnetId $subnetId -WhatIf
