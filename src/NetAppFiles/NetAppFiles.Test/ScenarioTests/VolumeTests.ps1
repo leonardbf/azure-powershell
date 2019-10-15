@@ -46,7 +46,7 @@ function Test-VolumeCrud
         UnixReadWrite = 'true'
         Cifs = 'false'
         Nfsv3 = 'true'
-        Nfsv4 = 'false'
+        Nfsv41 = 'false'
         AllowedClients = '0.0.0.0/0'
     }
     $rule2 = @{
@@ -55,7 +55,7 @@ function Test-VolumeCrud
         UnixReadWrite = 'true'
         Cifs = 'false'
         Nfsv3 = 'true'
-        Nfsv4 = 'false'
+        Nfsv41 = 'false'
         AllowedClients = '1.2.3.0/24'
     }
     $rule3 = @{
@@ -64,7 +64,7 @@ function Test-VolumeCrud
         UnixReadWrite = 'true'
         Cifs = 'false'
         Nfsv3 = 'true'
-        Nfsv4 = 'false'
+        Nfsv41 = 'false'
         AllowedClients = '2.3.4.0/24'
     }
 
@@ -73,7 +73,7 @@ function Test-VolumeCrud
 			$rule1, $rule2
 		)
 	}
-    
+
     $exportPolicyMod = @{
 		Rules = (
 			$rule3
@@ -83,7 +83,7 @@ function Test-VolumeCrud
     # create the list of protocol types
     $protocolTypes = New-Object string[] 2
     $protocolTypes[0] = "NFSv3"
-    $protocolTypes[1] = "NFSv4"
+    $protocolTypes[1] = "NFSv4.1"
 
     try
     {
@@ -157,7 +157,7 @@ function Test-VolumeCrud
             UnixReadWrite = 'true'
             Cifs = 'false'
             Nfsv3 = 'true'
-            Nfsv4 = 'false'
+            Nfsv41 = 'false'
             AllowedClients = '1.2.3.0/24'
         }
 
