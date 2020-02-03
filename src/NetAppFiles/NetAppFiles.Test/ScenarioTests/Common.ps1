@@ -1,4 +1,4 @@
-﻿# ----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 #
 # Copyright Microsoft Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,28 +58,6 @@ function Get-ProviderLocation($provider)
 
     return "westus2"
 }
-
-<#
-.SYNOPSIS
-Gets the source  location for  ANF resources
-#>
-#function Get-SourceLocation()
-#{
-    # tests must execute against the staging environments
-    # due to volume replication and region peering
-#    return "westus2stage"
-#}
-
-<#
-.SYNOPSIS
-Gets the destination location for ANF resources
-#>
-#function Get-DestinationLocation()
-#{
-    # tests must execute against the staging environments
-    # due to volume replication and region peering
-#    return "southcentralusstage"
-#}
 
 <#
 .SYNOPSIS

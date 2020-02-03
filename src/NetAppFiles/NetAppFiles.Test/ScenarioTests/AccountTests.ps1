@@ -23,8 +23,6 @@ function Test-AccountActiveDirectory
     $accName2 = Get-ResourceName
     $accName3 = Get-ResourceName
     $resourceLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceGroupLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceLocation = Get-SourceLocation
     
     $activeDirectory1 = @{
         Username = "sdkuser"
@@ -46,7 +44,6 @@ function Test-AccountActiveDirectory
     try
     {
         # create the resource group
-        #New-AzResourceGroup -Name $resourceGroup -Location $resourceGroupLocation
         New-AzResourceGroup -Name $resourceGroup -Location $resourceLocation
 
         # check multiple ADs are captured
@@ -125,13 +122,10 @@ function Test-AccountCrud
     $accName2 = Get-ResourceName
     $accName3 = Get-ResourceName
     $resourceLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceGroupLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceLocation = Get-SourceLocation
 
     try
     {
         # create the resource group
-        #New-AzResourceGroup -Name $resourceGroup -Location $resourceGroupLocation
         New-AzResourceGroup -Name $resourceGroup -Location $resourceLocation
 
         # create and check account 1
@@ -195,13 +189,10 @@ function Test-AccountPipelines
     $accName1 = Get-ResourceName
     $accName2 = Get-ResourceName
     $resourceLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceGroupLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceLocation = Get-SourceLocation
 
     try
     {
         # create the resource group
-        #New-AzResourceGroup -Name $resourceGroup -Location $resourceGroupLocation
         New-AzResourceGroup -Name $resourceGroup -Location $resourceLocation
 
         New-AnfAccount -ResourceGroupName $resourceGroup -Location $resourceLocation -Name $accName1 | Remove-AnfAccount

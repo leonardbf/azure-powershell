@@ -33,8 +33,6 @@ function Test-VolumeCrud
     $usageThreshold = 100 * $gibibyte
     $doubleUsage = 2 * $usageThreshold
     $resourceLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceGroupLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceLocation = Get-SourceLocation
     $subnetName = "default"
     $poolSize = 4398046511104
     $serviceLevel = "Premium"
@@ -103,11 +101,9 @@ function Test-VolumeCrud
     try
     {
         # create the resource group
-        #New-AzResourceGroup -Name $resourceGroup -Location $resourceGroupLocation
         New-AzResourceGroup -Name $resourceGroup -Location $resourceLocation
 		
         # create virtual network
-        #$virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceGroupLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $delegation = New-AzDelegation -Name "netAppVolumes" -ServiceName "Microsoft.Netapp/volumes"
         Add-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork -AddressPrefix "10.0.1.0/24" -Delegation $delegation | Set-AzVirtualNetwork
@@ -414,8 +410,6 @@ function Test-VolumePipelines
     $usageThreshold = 100 * $gibibyte
     $doubleUsage = 2 * $usageThreshold
     $resourceLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceGroupLocation = Get-ProviderLocation "Microsoft.NetApp"
-    #$resourceLocation = Get-SourceLocation
     $subnetName = "default"
     $poolSize = 4398046511104
     $serviceLevel = "Premium"
@@ -426,11 +420,9 @@ function Test-VolumePipelines
     try
     {
         # create the resource group
-        #New-AzResourceGroup -Name $resourceGroup -Location $resourceGroupLocation
         New-AzResourceGroup -Name $resourceGroup -Location $resourceLocation
 		
         # create virtual network
-        #$virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceGroupLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $delegation = New-AzDelegation -Name "netAppVolumes" -ServiceName "Microsoft.Netapp/volumes"
         Add-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork -AddressPrefix "10.0.1.0/24" -Delegation $delegation | Set-AzVirtualNetwork
