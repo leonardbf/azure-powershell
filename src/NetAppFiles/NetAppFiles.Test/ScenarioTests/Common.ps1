@@ -61,6 +61,28 @@ function Get-ProviderLocation($provider)
 
 <#
 .SYNOPSIS
+Gets the source  location for  ANF resources
+#>
+#function Get-SourceLocation()
+#{
+    # tests must execute against the staging environments
+    # due to volume replication and region peering
+#    return "westus2stage"
+#}
+
+<#
+.SYNOPSIS
+Gets the destination location for ANF resources
+#>
+#function Get-DestinationLocation()
+#{
+    # tests must execute against the staging environments
+    # due to volume replication and region peering
+#    return "southcentralusstage"
+#}
+
+<#
+.SYNOPSIS
 Creates a resource group to use in tests
 #>
 function TestSetup-CreateResourceGroup

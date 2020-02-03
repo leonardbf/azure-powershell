@@ -33,6 +33,8 @@ function Test-VolumeCrud
     $usageThreshold = 100 * $gibibyte
     $doubleUsage = 2 * $usageThreshold
     $resourceLocation = Get-ProviderLocation "Microsoft.NetApp"
+    #$resourceGroupLocation = Get-ProviderLocation "Microsoft.NetApp"
+    #$resourceLocation = Get-SourceLocation
     $subnetName = "default"
     $poolSize = 4398046511104
     $serviceLevel = "Premium"
@@ -101,9 +103,11 @@ function Test-VolumeCrud
     try
     {
         # create the resource group
+        #New-AzResourceGroup -Name $resourceGroup -Location $resourceGroupLocation
         New-AzResourceGroup -Name $resourceGroup -Location $resourceLocation
 		
         # create virtual network
+        #$virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceGroupLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $delegation = New-AzDelegation -Name "netAppVolumes" -ServiceName "Microsoft.Netapp/volumes"
         Add-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork -AddressPrefix "10.0.1.0/24" -Delegation $delegation | Set-AzVirtualNetwork
@@ -234,6 +238,164 @@ function Test-VolumeCrud
     }
 }
 
+
+<#
+.SYNOPSIS
+Test Volume Pipeline operations (using command aliases)
+#>
+function Test-VolumeReplication
+{
+    $currentSub = (Get-AzureRmContext).Subscription
+    $subsid = $currentSub.SubscriptionId
+
+    $srcResourceGroup = Get-ResourceGroupName
+    $srcResourceGroup = $srcResourceGroup
+    $destResourceGroup = Get-ResourceGroupName
+    $destResourceGroup = $destResourceGroup
+    $srcAccName = Get-ResourceName
+    $destAccName = Get-ResourceName
+    $srcPoolName = Get-ResourceName
+    $destPoolName = Get-ResourceName
+    $srcVolName = Get-ResourceName
+    $destVolName = Get-ResourceName
+    $gibibyte = 1024 * 1024 * 1024
+    $usageThreshold = 100 * $gibibyte
+    $doubleUsage = 2 * $usageThreshold
+    $srcResourceGroupLocation = "westus2"
+    $destResourceGroupLocation = "southcentralus"
+    $srcResourceLocation = "westus2stage"
+    $destResourceLocation = "southcentralusstage"
+    $subnetName = "default"
+    $poolSize = 4398046511104
+    $serviceLevel = "Premium"
+    $srcVnetName = $srcResourceGroup + "-vnet"
+    $destVnetName = $destResourceGroup + "-vnet"
+
+    $srcSubnetId = "/subscriptions/$subsId/resourceGroups/$srcResourceGroup/providers/Microsoft.Network/virtualNetworks/$srcVnetName/subnets/$subnetName"
+    $destSubnetId = "/subscriptions/$subsId/resourceGroups/$destResourceGroup/providers/Microsoft.Network/virtualNetworks/$destVnetName/subnets/$subnetName"
+
+    function WaitForSucceeded #($sourceOnly)
+    {
+        do
+        {
+            $sourceVolume = Get-AzNetAppFilesVolume -ResourceGroupName $srcResourceGroup -AccountName $srcAccName -PoolName $srcPoolName -VolumeName $srcVolName
+            $dpVolume = Get-AzNetAppFilesVolume -ResourceGroupName $destResourceGroup -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName
+
+           Start-Sleep -Seconds 1.0
+        }
+        while (($sourceVolume.ProvisioningState -ne "Succeeded") -or ($dpVolume.ProvisioningState -ne "Succeeded"));
+    }
+
+    function WaitForRepliationStatus($targetState)
+    {
+        do
+        {
+            $replicationStatus = Get-AnfReplicationStatus -ResourceGroupName $destResourceGroup -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName
+
+            Start-Sleep -Seconds 1.0
+        }
+        while ($replicationStatus.MirrorState -ne $targetState)
+    }
+
+    function SleepDuringRecord
+    {
+        if ($env:AZURE_TEST_MODE -eq "Record")
+        {
+            Write-Output "Sleep in record mode"
+            Start-Sleep -Seconds 30.0
+        }
+    }
+
+    try
+    {
+        # normal setup :
+
+        # create the resource groups for source and destination
+        New-AzResourceGroup -Name $srcResourceGroup -Location $srcResourceGroupLocation
+        New-AzResourceGroup -Name $destResourceGroup -Location $destResourceGroupLocation
+
+        # create virtual network source
+        $virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $srcResourceGroup -Location $srcResourceGroupLocation -Name $srcVnetName -AddressPrefix 10.0.0.0/16
+        $delegation = New-AzDelegation -Name "netAppVolumes" -ServiceName "Microsoft.Netapp/volumes"
+        Add-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork -AddressPrefix "10.0.2.0/24" -Delegation $delegation | Set-AzVirtualNetwork
+
+        # create virtual network destination
+        $virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $destResourceGroup -Location $destResourceGroupLocation -Name $destVnetName -AddressPrefix 10.0.0.0/16
+        $delegation = New-AzDelegation -Name "netAppVolumes" -ServiceName "Microsoft.Netapp/volumes"
+        Add-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork -AddressPrefix "10.0.2.0/24" -Delegation $delegation | Set-AzVirtualNetwork
+
+        # create accounts for source and destination
+        $srcRetrievedAcc = New-AzNetAppFilesAccount -ResourceGroupName $srcResourceGroup -Location $srcResourceLocation -AccountName $srcAccName
+	    $destRetrievedAcc = New-AzNetAppFilesAccount -ResourceGroupName $destResourceGroup -Location $destResourceLocation -AccountName $destAccName
+
+        # create pools for source and destination
+        $srcRetrievedPool = New-AzNetAppFilesPool -ResourceGroupName $srcResourceGroup -Location $srcResourceLocation -AccountName $srcAccName -PoolName $srcPoolName -PoolSize $poolSize -ServiceLevel $serviceLevel
+        $destRetrievedPool = New-AzNetAppFilesPool -ResourceGroupName $destResourceGroup -Location $destResourceLocation -AccountName $destAccName -PoolName $destPoolName -PoolSize $poolSize -ServiceLevel $serviceLevel
+
+        # create source volume
+        $sourceVolume = New-AzNetAppFilesVolume -ResourceGroupName $srcResourceGroup -Location $srcResourceLocation -AccountName $srcAccName -PoolName $srcPoolName -VolumeName $srcVolName -CreationToken $srcVolName -UsageThreshold $usageThreshold -ServiceLevel $serviceLevel -SubnetId $srcSubnetId
+        #Assert-AreEqual "$srcAccName/$srcPoolName/$srcVolName" $sourceVolume.Name
+
+        $sourceVolume = Get-AzNetAppFilesVolume -ResourceGroupName $srcResourceGroup -AccountName $srcAccName -PoolName $srcPoolName -VolumeName $srcVolName
+
+        # create data protection volume
+
+        $replication = @{
+            EndpointType = "dst"
+            RemoteVolumeResourceId = $sourceVolume.Id
+            ReplicationSchedule = "_10minutely"
+        }
+
+        $destinationVolume = New-AzNetAppFilesVolume -ResourceGroupName $destResourceGroup -Location $destResourceLocation -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName -CreationToken $destVolName -UsageThreshold $usageThreshold -ServiceLevel $serviceLevel -SubnetId $destSubnetId -ReplicationObject $replication -VolumeType "DataProtection"
+
+        $destinationVolume = Get-AzNetAppFilesVolume  -ResourceGroupName $destResourceGroup -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName
+        #Assert-AreEqual "$destAccName/$destPoolName/$destVolName" $destinationVolume.Name
+        #Assert-NotNull $destinationVolume.DataProtection
+        WaitForSucceeded
+        #Start-Sleep -Seconds 30.0
+        SleepDuringRecord
+
+        # authorize the replication
+        Approve-AnfReplication -ResourceGroupName $srcResourceGroup -AccountName $srcAccName -PoolName $srcPoolName -VolumeName $srcVolName -DataProtectionVolumeId $destinationVolume.Id
+
+        WaitForSucceeded
+        WaitForRepliationStatus "Mirrored"
+
+        # break the replication
+        Pause-AnfReplication -ResourceGroupName $destResourceGroup -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName
+
+        WaitForRepliationStatus "Broken"
+        SleepDuringRecord
+        #Start-Sleep -Seconds 30.0
+        WaitForSucceeded
+
+        # resync the replication
+        Resume-AnfReplication -ResourceGroupName $destResourceGroup -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName
+
+        WaitForRepliationStatus "Mirrored"
+        SleepDuringRecord
+        #Start-Sleep -Seconds 30.0
+
+        # break the replication again
+        Pause-AnfReplication -ResourceGroupName $destResourceGroup -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName
+
+        WaitForRepliationStatus "Broken"
+        SleepDuringRecord
+        #Start-Sleep -Seconds 30.0
+
+        # delete the data protection object
+        #  - initiate delete replication on destination, this then releases on source, both resulting in object deletion
+        Remove-AnfReplication -ResourceGroupName $destResourceGroup -AccountName $destAccName -PoolName $destPoolName -VolumeName $destVolName
+
+
+    }
+    finally
+    {
+        # Cleanup
+        Clean-ResourceGroup $resourceGroup
+    }
+}
+
 <#
 .SYNOPSIS
 Test Volume Pipeline operations (using command aliases)
@@ -252,6 +414,8 @@ function Test-VolumePipelines
     $usageThreshold = 100 * $gibibyte
     $doubleUsage = 2 * $usageThreshold
     $resourceLocation = Get-ProviderLocation "Microsoft.NetApp"
+    #$resourceGroupLocation = Get-ProviderLocation "Microsoft.NetApp"
+    #$resourceLocation = Get-SourceLocation
     $subnetName = "default"
     $poolSize = 4398046511104
     $serviceLevel = "Premium"
@@ -262,9 +426,11 @@ function Test-VolumePipelines
     try
     {
         # create the resource group
+        #New-AzResourceGroup -Name $resourceGroup -Location $resourceGroupLocation
         New-AzResourceGroup -Name $resourceGroup -Location $resourceLocation
 		
         # create virtual network
+        #$virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceGroupLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $virtualNetwork = New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $resourceLocation -Name $vnetName -AddressPrefix 10.0.0.0/16
         $delegation = New-AzDelegation -Name "netAppVolumes" -ServiceName "Microsoft.Netapp/volumes"
         Add-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork -AddressPrefix "10.0.1.0/24" -Delegation $delegation | Set-AzVirtualNetwork
